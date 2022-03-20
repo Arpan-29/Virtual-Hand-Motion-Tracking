@@ -19,6 +19,8 @@ detector = htm.handDetector(maxHands=1)
 wScr, hScr = autopy.screen.size()
 # print(wScr, hScr)
 
+dynamicGesture = []
+
 while True:
     
     success, img = cap.read()
@@ -32,9 +34,18 @@ while True:
         
         fingers = detector.fingersUp()
         # print(fingers)
-        cv2.rectangle(img, (frameR, frameR), (wCam - frameR, hCam - frameR),(255, 0, 255), 2)
+
+        # for i in range(len(fingers)):
+        #     fingerW = wCam // 5
+        #     cv2.rectangle(img, ((4 - i) * fingerW, 0), ((5 - i) * fingerW, frameR),(0, 0, 0), 5)
+        #     if fingers[i] == 1:
+        #         cv2.rectangle(img, ((4 - i) * fingerW, 0), ((5 - i) * fingerW, frameR),(255, 255, 255), -1)
+        #     else:
+        #         cv2.rectangle(img, ((4 - i) * fingerW, 0), ((5 - i) * fingerW, frameR),(50, 50, 50), -1)
+
+        # cv2.rectangle(img, (frameR, frameR), (wCam - frameR, hCam - frameR),(255, 0, 255), 2)
         
-        if fingers[1] == 1 and fingers[0] == 0:
+        if fingers == [0, 1, 0, 0, 0]:
             
             x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
             y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
@@ -46,7 +57,7 @@ while True:
             cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
             plocX, plocY = clocX, clocY
 
-        if fingers[0] == 1 and fingers[1] == 1:
+        elif fingers == [1, 1, 0, 0, 0]:
             
             length, img, lineInfo = detector.findDistance(8, 4, img)
             # print(length)
@@ -56,11 +67,35 @@ while True:
                 15, (0, 255, 0), cv2.FILLED)
                 autopy.mouse.click()
 
+        elif fingers == [0, 1, 1, 0, 0]:
+
+            x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
+            y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
+            
+            clocX = plocX + (x3 - plocX) / smoothening
+            clocY = plocY + (y3 - plocY) / smoothening
+
+            x4 = np.interp(clocX, (0, wScr), (frameR, wCam - frameR))
+            y4 = np.interp(clocY, (0, hScr), (frameR, hCam - frameR))
+
+            dynamicGesture.append((int(x4), int(y4)))
+            
+            for (x, y) in dynamicGesture:
+                cv2.circle(img, (x, y), 15, (255, 0, 255), cv2.FILLED)
+
+            while len(dynamicGesture) > 100:
+                dynamicGesture.pop(0)
+
+            plocX, plocY = clocX, clocY
+            
+        else:
+            dynamicGesture = []
+
     cTime = time.time()
     fps = 1 / (cTime - pTime)
     pTime = cTime
-    cv2.putText(img, str(int(fps)), (20, 50), cv2.FONT_HERSHEY_PLAIN, 3,
-    (255, 0, 0), 3)
+    # cv2.putText(img, str(int(fps)), (20, 50), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 0), 3)
     
+    img = cv2.flip(img, 1)
     cv2.imshow("Image", img)
     cv2.waitKey(1)
